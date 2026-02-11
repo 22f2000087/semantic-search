@@ -1,61 +1,47 @@
-import json
-import time
-import numpy as np
-import faiss
 from fastapi import FastAPI
 from pydantic import BaseModel
-from sentence_transformers import SentenceTransformer
+from openai import OpenAI
+import numpy as np
+import os
 
 app = FastAPI()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Load documents
-with open("documents.json", "r") as f:
-    documents = json.load(f)
-
-# Load model
-model = SentenceTransformer("all-MiniLM-L6-v2")
-
-# Load FAISS index
-index = faiss.read_index("vector.index")
-
-class SearchRequest(BaseModel):
+class SimilarityRequest(BaseModel):
+    docs: list[str]
     query: str
-    k: int = 8
-    rerank: bool = True
-    rerankK: int = 5
 
-@app.post("/search")
-def search(request: SearchRequest):
-    start = time.time()
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-    query_embedding = model.encode([request.query], convert_to_numpy=True)
-    faiss.normalize_L2(query_embedding)
+@app.post("/similarity")
+def similarity(req: SimilarityRequest):
+    # Embed documents
+    doc_embeddings = []
+    for doc in req.docs:
+        response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=doc
+        )
+        doc_embeddings.append(response.data[0].embedding)
 
-    scores, indices = index.search(query_embedding, request.k)
+    # Embed query
+    query_embedding = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=req.query
+    ).data[0].embedding
 
-    results = []
-    for score, idx in zip(scores[0], indices[0]):
-        results.append({
-            "id": int(idx),
-            "score": float((score + 1) / 2),  # normalize 0–1
-            "content": documents[idx]["content"],
-            "metadata": {"source": documents[idx]["id"]}
-        })
+    # Compute similarities
+    scores = []
+    for emb in doc_embeddings:
+        score = cosine_similarity(query_embedding, emb)
+        scores.append(score)
 
-    # Sort descending
-    results = sorted(results, key=lambda x: x["score"], reverse=True)
-
-    if request.rerank:
-        results = results[:request.rerankK]
-
-    latency = int((time.time() - start) * 1000)
+    # Get top 3
+    top_indices = np.argsort(scores)[-3:][::-1]
 
     return {
-        "results": results,
-        "reranked": request.rerank,
-        "metrics": {
-            "latency": latency,
-            "totalDocs": len(documents)
-        }
+        "matches": [req.docs[i] for i in top_indices]
     }
+
 
