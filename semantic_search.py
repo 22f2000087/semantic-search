@@ -63,15 +63,22 @@ SCIENTIFIC_ABSTRACTS = [
 ]
 
 class SemanticSearchEngine:
+    
     def __init__(self, documents):
         self.documents = documents
-        print("Loading embedding model...")
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        print("Loading lightweight embedding model...")
+        # Use SMALLER model that fits in 512MB RAM
+        self.model = SentenceTransformer('paraphrase-albert-small-v2', device='cpu')
         
-        # Create embeddings
-        print("Creating document embeddings...")
+        # Create embeddings in batches to save memory
+        print("Creating document embeddings (this may take a moment)...")
         doc_texts = [doc['content'] for doc in self.documents]
-        self.embeddings = self.model.encode(doc_texts, normalize_embeddings=True)
+        
+        # Encode in smaller batches to prevent memory issues
+        self.embeddings = self.model.encode(doc_texts, 
+                                           normalize_embeddings=True,
+                                           batch_size=32,  # Process 32 at a time
+                                           show_progress_bar=True)
         
         # Create FAISS index
         self.index = faiss.IndexFlatIP(self.embeddings.shape[1])
