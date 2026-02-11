@@ -135,14 +135,31 @@ def search():
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON payload"}), 400
-        
+
         query = data.get('query', '')
         k = data.get('k', 8)
         rerank = data.get('rerank', False)
-        rerank_k = data.get('rerankK', 5)
-        
+        rerank_k = data.get('rerankK', 5)  # Fixed: capital K
+
         if not query:
             return jsonify({"error": "Query is required"}), 400
+            
+        # Rest of your code...
+        results = search_engine.search(query, k)
+        results = results[:rerank_k]
+        
+        return jsonify({
+            "results": results,
+            "reranked": rerank,
+            "metrics": {
+                "latency": round((time.time() - start_time) * 1000, 2),
+                "totalDocs": len(search_engine.documents)
+            }
+        })
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
         
         # Perform search
         results = search_engine.search(query, k)
