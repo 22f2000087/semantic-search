@@ -101,10 +101,24 @@ class SemanticSearchEngine:
         
         return results
 
+
 # Initialize search engine
 print("🚀 Starting Semantic Search API...")
-search_engine = SemanticSearchEngine(SCIENTIFIC_ABSTRACTS)
-print("✓ Ready to accept requests!")
+try:
+    search_engine = SemanticSearchEngine(SCIENTIFIC_ABSTRACTS)
+    print("✓ Ready to accept requests!")
+except Exception as e:
+    print(f"❌ ERROR INITIALIZING SEARCH ENGINE: {e}")
+    import traceback
+    traceback.print_exc()
+    # Create a dummy search engine as fallback
+    class DummySearchEngine:
+        def __init__(self):
+            self.documents = SCIENTIFIC_ABSTRACTS
+        def search(self, query, k=8):
+            return []
+    search_engine = DummySearchEngine()
+    print("⚠️ Using dummy search engine - ML features disabled")
 
 @app.route('/search', methods=['POST'])
 def search():
@@ -163,4 +177,6 @@ def health():
     })
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    port = int(os.environ.get('PORT', 5000))
+    print(f"🔌 Attempting to bind to port: {port}")
+    app.run(host='0.0.0.0', port=port, debug=False)
