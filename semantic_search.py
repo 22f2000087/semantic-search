@@ -1,4 +1,4 @@
-python
+
 import numpy as np
 import faiss
 from flask import Flask, request, jsonify
