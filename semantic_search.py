@@ -8,7 +8,7 @@ import json
 
 app = Flask(__name__)
 
-# Scientific abstracts (I'll give you 10 to start)
+# Add your documents HERE
 SCIENTIFIC_ABSTRACTS = [
     {
         "id": 0,

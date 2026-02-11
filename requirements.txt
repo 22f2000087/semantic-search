@@ -1,6 +1,7 @@
-flask==2.3.3
-numpy==1.24.3
-faiss-cpu==1.7.4
+flask==2.2.5
+numpy==1.23.5
+faiss-cpu==1.7.3
 sentence-transformers==2.2.2
-gunicorn==21.2.0
+huggingface_hub==0.16.4
+gunicorn==20.1.0
 
